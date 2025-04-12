@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Document</title>
+  </head>
+  <body>
+    <script ezv>
+      const propX = this.props.propX
+
+      const list = [1, 2, 3]
+      let bool = true
+
+      setTimeout(() => {
+        bool = false
+      }, 3000)
+    </script>
+
+    <!-- if(bool) -->
+    <div>if</div>
+    <!-- else if(bool) -->
+    <div>else if</div>
+    <!-- else -->
+    <div>else</div>
+
+    <!-- for(const item of list) -->
+    <div>
+      ${ item }
+
+      <!-- for(const item2 of list2) -->
+      <div>${ item2 }</div>
+    </div>
+
+    <div .title="'string'" .onclick="alert">text: ${ 'string' }</div>
+
+    <!-- \`string \${ value }\` -->
+    <script type="module">
+      import { Compiler } from './src/Compiler.js'
+      import { View } from './src/View.js'
+
+      window.Compiler = Compiler
+      window.View = View
+
+      window.v = new View(document.documentElement)
+      console.log(v.create)
+    </script>
+  </body>
+</html>
