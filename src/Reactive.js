@@ -25,7 +25,12 @@ export class Reactive {
   static reactiveStore = new WeakMap()
   static rawStore = new WeakMap()
   static toReactive(value) {
-    if (typeof value !== 'object' || !value) {
+    if (
+      typeof value !== 'object' ||
+      !value ||
+      typeof value === 'function' ||
+      value instanceof Node
+    ) {
       return value
     }
 

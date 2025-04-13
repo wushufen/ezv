@@ -6,9 +6,105 @@ export class Compiler {
     if (typeof node === 'string') node = Compiler.parse(node)
 
     let script = ''
-    let template = this.compileNode(node)
+    let template = ''
 
-    return `return ${template}`
+    loop(node)
+    function loop(/**@type Node*/ node) {
+      if (node instanceof HTMLScriptElement) {
+        script += node.innerHTML
+        template += `{ nodeName: 'script', childNodes: [] },`
+        return
+      }
+
+      if (node instanceof Text) {
+        // if (!node.nodeValue?.trim()) return
+        template += `{ nodeName: '#text', props: { nodeValue: \`${node.nodeValue}\` }, childNodes: [] },`
+        return
+      }
+
+      if (node instanceof Element) {
+        const ifAttr = node.getAttribute('if')
+        const elseAttr = node.hasAttribute('else')
+        const forAttr = node.getAttribute('for')
+
+        if (forAttr) {
+          template += `
+          ...(function* () {
+            for (const item of list) {
+              yield`
+        }
+
+        if (ifAttr) {
+          template += `(() => {
+            if (bool) {
+              return `
+        }
+
+        // if (elseAttr) {
+        //   template += ` else {
+        //     return `
+        // }
+
+        template += `{`
+        template += `  nodeName: '${node.nodeName}',`
+        template += `  props: {${getPropsCode()}},`
+        function getPropsCode() {
+          if (!(node instanceof Element)) return ''
+          let code = ''
+          for (const attr of node.attributes) {
+            const name = attr.nodeName
+            const value = attr.nodeValue
+            if (name.startsWith('.')) {
+              code += `${name.slice(1)}:${value}, `
+            }
+          }
+          return code
+        }
+
+        template += `  childNodes: [`
+        for (const child of node.childNodes) {
+          loop(child)
+        }
+        template += `  ],`
+        template += `}`
+
+        if (ifAttr) {
+          template += `
+          }
+        })()`
+        }
+
+        // if (elseAttr) {
+        //   template += `}`
+        // }
+
+        if (forAttr) {
+          template += `
+            }
+          })()`
+        }
+
+        template += `,\n`
+        return
+      }
+
+      template += `{ nodeName: '#text', props: { nodeValue: '' }, childNodes: [] },`
+    }
+
+    template = template.replace(/,\n$/, '')
+    return `
+    with (this.scope) {
+      ${script
+        // let x = 1 // this.scope.x = 1
+        // TODO 排除局部变量
+        .replace(/\b(?:var|let|const)\s+(\S+)/g, 'this.scope.$1')}
+    
+    
+      this.render = () => {
+        return this.diff(${template})
+      }
+    }
+    `
   }
   /** @param {Node} node*/
   static compileNode(node) {

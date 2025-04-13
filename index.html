@@ -4,38 +4,44 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Document</title>
-    <script type="module">
-      import { Compiler } from './src/Compiler.js'
-      import { View } from './src/View.js?x'
-      import { VNode } from './src/VNode.js'
-
-      window.Compiler = Compiler
-      window.View = View
-      window.VNode = VNode
-
-      // console.log(Compiler.compile(document.body))
-      console.log(new View(document.body))
-    </script>
-    <script src="./src/stopScript.js"></script>
+    <script src="./src/index.browser.js"></script>
   </head>
   <body>
     <script>
-      const list = [1, 2, 3]
+      let list = [1, 2, 3]
       let bool = true
 
       setTimeout(() => {
         bool = false
+        list = [4, 5, 6, 7, 8, 9, 10]
+        console.log('bool', bool)
       }, 3000)
     </script>
 
+    <div>${ 'string' }</div>
+
     <div if="bool">if</div>
-    <div else if="bool">else if</div>
+    <div else-if="bool">else if</div>
     <div else>else</div>
 
     <ul>
-      <li for="const item of list">\${ item }</li>
+      <li for="const item of list">${ item }</li>
     </ul>
 
-    <div .title="1 + 1" .onclick="alert">\${ 'string' }</div>
+    <button
+      .title="1 + 1"
+      .onclick="()=>{
+        bool=!bool
+        console.log('bool', bool)
+      }"
+    >
+      button
+    </button>
+
+    <div id="ezv">
+      <span>${ Math.random() }</span>
+      <span>${ Math.random() }</span>
+      <span>${ Math.random() }</span>
+    </div>
   </body>
 </html>
