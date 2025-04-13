@@ -1,27 +1,16 @@
 import { Compiler } from './Compiler.js'
 import { Reactive } from './Reactive.js'
-import { NodeX } from './NodeX.js'
 
 export class View extends EventTarget {
   /**
-   *
-   * @param {Element | DocumentFragment | string} html
-   * @returns
+   * @param {Node|string} html
    */
   constructor(html = '') {
     super()
-    let code = ''
+    let wrapper = html instanceof Node ? html : Compiler.parse(html)
 
-    if (typeof html == 'string') {
-      const fragment = Compiler.parse(html)
-      this.childNodes = [...fragment.childNodes]
-      code = Compiler.compile(fragment)
-    } else if (html instanceof Element) {
-      this.childNodes = [...html.childNodes]
-      code = Compiler.compile(html)
-    }
-
-    this.create = Function(code)
+    this.create = Function(Compiler.compile(wrapper))
+    this.childNodes = [...wrapper.childNodes]
 
     return Reactive.toReactive(this)
   }
@@ -45,12 +34,8 @@ export class View extends EventTarget {
       },
     }
   )
-  props = {}
   /**@type Function */
-  create = () => {}
-  $ = (id) => {
-    return new NodeX()
-  }
+  // create = () => {}
   /**
    * @param {Element} target
    */
