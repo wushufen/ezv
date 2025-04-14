@@ -41,6 +41,33 @@ export class Compiler {
               if (${ifAttr}) {
                 return (\n${compileNode(node, false)})
               }
+              ${(() => {
+                let code = ''
+
+                let next = node.nextElementSibling
+                while (next && next.hasAttribute('elseif')) {
+                  code += ` else if (${next.getAttribute('elseif')}) {
+                    return (\n${compileNode(next, false)})
+                  }`
+                  next = next.nextElementSibling
+                }
+
+                return code
+              })()}
+              ${(() => {
+                let next = node.nextElementSibling
+                while (next) {
+                  if (next.hasAttribute('elseif')) {
+                    next = next.nextElementSibling
+                    continue
+                  } else if (next.hasAttribute('else')) {
+                    return ` else {
+                      return (\n${compileNode(next, false)})
+                    }`
+                  }
+                  break
+                }
+              })()}
             })()
           `
         }
