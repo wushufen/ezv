@@ -1,5 +1,6 @@
 import { Compiler } from './Compiler.js'
 import { Reactive } from './Reactive.js'
+import './VNode.js'
 
 /** View Component */
 export class View extends EventTarget {
@@ -22,7 +23,7 @@ export class View extends EventTarget {
       return target._scope[key]
     },
     set(target, key, value) {
-      console.warn('set', { target, key, value })
+      // console.warn('set', { target, key, value })
       target._scope[key] = value
 
       target.lastRenderPromiseReject()
@@ -49,10 +50,10 @@ export class View extends EventTarget {
    */
   diff(vNode) {
     const createNode = View.createNode
-    console.log('diff', { el: this.el, vNode })
-    console.groupCollapsed('patch')
+    // console.log('diff', { el: this.el, vNode })
+    // console.groupCollapsed('patch')
     patch(this.el, vNode)
-    console.groupEnd()
+    // console.groupEnd()
     console.log('render', this.render)
 
     /**
@@ -61,7 +62,7 @@ export class View extends EventTarget {
      * @param {Node?=} parentNode
      */
     function patch(node, vNode, parentNode = node.parentNode) {
-      console.log('patch', { node, vNode, parentNode })
+      // console.log('patch', { node, vNode, parentNode })
       if (!parentNode) return
       if (vNode?.skip) return
 
@@ -93,7 +94,7 @@ export class View extends EventTarget {
       const childNodes = [...node.childNodes]
       const vChildNodes = vNode.childNodes || []
       const maxLength = Math.max(childNodes.length, vChildNodes.length)
-      console.log('child', { childNodes, vChildNodes, maxLength })
+      // console.log('child', { childNodes, vChildNodes, maxLength })
       for (let i = 0; i < maxLength; i++) {
         patch(childNodes[i], vChildNodes[i], node)
       }

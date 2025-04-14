@@ -31,40 +31,41 @@ export class Compiler {
 
       if (node instanceof Element) {
         const ifAttr = node.getAttribute('if')
-        const elseIfAttr = node.getAttribute('else-if')
+        const elseIfAttr = node.getAttribute('elseif')
         const elseAttr = node.hasAttribute('else')
         const forAttr = node.getAttribute('for')
-
-        if (forAttr && process) {
-          if (ifAttr) console.warn('no for+if')
-
-          return `
-            ...(function* () {
-              for (${forAttr}) {
-                yield ${compileNode(node, false)}
-              }
-            })()
-          `
-        }
 
         if (ifAttr && process) {
           return `
             (() => {
               if (${ifAttr}) {
-                return ${compileNode(node, false)}
+                return (\n${compileNode(node, false)})
               }
             })()
           `
         }
         if (elseIfAttr && process) {
-          return `{ nodeName: '#comment', nodeType: 'else if', skip: false }`
+          return `{ nodeName: '#comment', nodeValue: 'elseif', skip: false }`
         }
         if (elseAttr && process) {
-          return `{ nodeName: '#comment', nodeType: 'else', skip: false }`
+          return `{ nodeName: '#comment', nodeValue: 'else', skip: false }`
+        }
+
+        if (forAttr && process) {
+          return `
+            ...(function* () {
+              for (${forAttr}) {
+                yield (${
+                  !ifAttr ? '' : `!( ${ifAttr} ) ? undefined : `
+                }\n${compileNode(node, false)})
+              }
+            })()
+          `
         }
 
         let code = '{'
         code += ifAttr ? ` if: true,` : ''
+        code += elseIfAttr ? ` elseif: true,` : ''
         code += elseAttr ? ` else: true,` : ''
         code += forAttr ? ` for: true,` : ''
         code += ` nodeName: '${node.nodeName}',`
