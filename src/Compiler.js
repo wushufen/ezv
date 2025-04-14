@@ -6,49 +6,70 @@ export class Compiler {
     if (typeof node === 'string') node = Compiler.parse(node)
 
     let script = ''
-    let template = ''
+    const template = compileNode(node)
 
-    loop(node)
-    function loop(/**@type Node*/ node) {
+    /**
+     *
+     * @param {Node} node
+     * @param {boolean} process 含流程
+     */
+    function compileNode(node, process = true) {
       if (node instanceof HTMLScriptElement) {
-        script += node.innerHTML
-        template += `{ nodeName: 'script', childNodes: [] },`
-        return
+        script += node.innerHTML + '\n'
+        return `{ nodeName: 'script', skip: true }`
       }
 
       if (node instanceof Text) {
-        // if (!node.nodeValue?.trim()) return
-        template += `{ nodeName: '#text', props: { nodeValue: \`${node.nodeValue}\` }, childNodes: [] },`
-        return
+        if (node.nodeValue?.trim()) {
+          const value =
+            node.nodeValue?.replace(/[`\\]/g, '\\$&')?.replace(/\n/g, '\\n') ??
+            ''
+          return `{ nodeName: '#text', props: { nodeValue: \`${value}\` } }`
+        }
+        return `{ nodeName: '#text', skip: true }`
       }
 
       if (node instanceof Element) {
         const ifAttr = node.getAttribute('if')
+        const elseIfAttr = node.getAttribute('else-if')
         const elseAttr = node.hasAttribute('else')
         const forAttr = node.getAttribute('for')
 
-        if (forAttr) {
-          template += `
-          ...(function* () {
-            for (const item of list) {
-              yield`
+        if (forAttr && process) {
+          if (ifAttr) console.warn('no for+if')
+
+          return `
+            ...(function* () {
+              for (${forAttr}) {
+                yield ${compileNode(node, false)}
+              }
+            })()
+          `
         }
 
-        if (ifAttr) {
-          template += `(() => {
-            if (bool) {
-              return `
+        if (ifAttr && process) {
+          return `
+            (() => {
+              if (${ifAttr}) {
+                return ${compileNode(node, false)}
+              }
+            })()
+          `
+        }
+        if (elseIfAttr && process) {
+          return `{ nodeName: '#comment', nodeType: 'else if', skip: false }`
+        }
+        if (elseAttr && process) {
+          return `{ nodeName: '#comment', nodeType: 'else', skip: false }`
         }
 
-        // if (elseAttr) {
-        //   template += ` else {
-        //     return `
-        // }
-
-        template += `{`
-        template += `  nodeName: '${node.nodeName}',`
-        template += `  props: {${getPropsCode()}},`
-        function getPropsCode() {
+        let code = '{'
+        code += ifAttr ? ` if: true,` : ''
+        code += elseAttr ? ` else: true,` : ''
+        code += forAttr ? ` for: true,` : ''
+        code += ` nodeName: '${node.nodeName}',`
+        code += ` props: {${compileProps()}},`
+        function compileProps() {
           if (!(node instanceof Element)) return ''
           let code = ''
           for (const attr of node.attributes) {
@@ -60,38 +81,19 @@ export class Compiler {
           }
           return code
         }
-
-        template += `  childNodes: [`
+        code += ` childNodes: [\n`
         for (const child of node.childNodes) {
-          loop(child)
+          const childCode = compileNode(child)
+          if (!childCode) continue
+          code += childCode + ',\n'
         }
-        template += `  ],`
-        template += `}`
-
-        if (ifAttr) {
-          template += `
-          }
-        })()`
-        }
-
-        // if (elseAttr) {
-        //   template += `}`
-        // }
-
-        if (forAttr) {
-          template += `
-            }
-          })()`
-        }
-
-        template += `,\n`
-        return
+        code += `]}`
+        return code
       }
 
-      template += `{ nodeName: '#text', props: { nodeValue: '' }, childNodes: [] },`
+      return `{ nodeName: '${node.nodeName}', nodeType: ${node.nodeType}, skip: true }`
     }
 
-    template = template.replace(/,\n$/, '')
     return `
     with (this.scope) {
       ${script
@@ -106,126 +108,6 @@ export class Compiler {
     }
     `
   }
-  /** @param {Node} node*/
-  static compileNode(node) {
-    let code = ''
-    code += `{
-      nodeName: '${node.nodeName}',
-      props: ${this.compileProps(node)},
-      childNodes: [${this.compileChildNodes(node)}]
-}`
-
-    /** if..else
-      (()=>{
-        if(bool){
-          return {}
-        } else if(bool) {
-          return {}
-        } else {
-          return {}
-        }
-      })()
-      */
-    if (node instanceof Element) {
-      // else if => else-if
-      if (node.hasAttribute('if') && node.hasAttribute('else')) {
-        node.setAttribute('else-if', node.getAttribute('if') || '')
-        node.removeAttribute('if')
-        node.removeAttribute('else')
-      }
-
-      const ifAttr = node.getAttribute('if')
-      const elseIfAttr = node.hasAttribute('else-if')
-      const elseAttr = node.hasAttribute('else')
-
-      if (ifAttr) {
-        code = `(()=>{
-          if(${ifAttr}){
-            return ${code}
-          }
-
-          ${(() => {
-            let code = ''
-
-            // else if, else
-            const nextSibling = node.nextElementSibling
-
-            return code
-          })()}
-          
-          return {/* if */}
-        })()
-        `
-      } else if (elseIfAttr) {
-        if (node['#fromIf']) {
-          code = `else if(bool) {
-            return ${code}
-          }`
-        } else {
-          code = `{/* else if */}`
-        }
-      } else if (elseAttr) {
-        if (node['#fromIf']) {
-          code = ` else {
-            return ${code}
-          }`
-        } else {
-          code = `{/* else */}`
-        }
-      }
-    }
-
-    /** for
-    ...(function* () {
-      for (const item of list) {
-          yield {}
-      }
-    })()
-    */
-    if (node instanceof Element) {
-      const forAttr = node.getAttribute('for')
-      if (forAttr) {
-        code = `
-          ...(function* () {
-            for (const item of list) {
-              yield ${code}
-            }
-          })()
-        `
-      }
-    }
-
-    return code
-  }
-  /** @param {Node} node*/
-  static compileProps(node) {
-    let code = ''
-    code += `{`
-    if (node instanceof Element) {
-      for (const attr of node.attributes) {
-        const name = attr.nodeName
-        const value = attr.nodeValue
-        if (name.startsWith('.')) {
-          code += `${name.slice(1)}:${value}, `
-        }
-      }
-    }
-    // nodeValue: `${}`
-    if (node instanceof Text) {
-      if (node.nodeValue?.trim()?.match(/\$\{/)) {
-        code += 'nodeValue: `' + node.nodeValue + '`'
-      }
-    }
-    code += `}`
-    return code
-  }
-  /** @param {Node} node*/
-  static compileChildNodes(node) {
-    return [...node.childNodes]
-      .map((child) => this.compileNode(child))
-      .join(',\n')
-  }
-
   static parse(html = '') {
     const container = document.createElement('div')
     container.innerHTML = html

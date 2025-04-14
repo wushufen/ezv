@@ -1,6 +1,7 @@
 import { Compiler } from './Compiler.js'
 import { Reactive } from './Reactive.js'
 
+/** View Component */
 export class View extends EventTarget {
   /**
    * @param {Node|string} html
@@ -9,7 +10,6 @@ export class View extends EventTarget {
     super()
 
     this.el = html instanceof Node ? html : Compiler.parse(html)
-    this.create = Function(Compiler.compile(this.el))
   }
   el
   _scope = {}
@@ -22,83 +22,82 @@ export class View extends EventTarget {
       return target._scope[key]
     },
     set(target, key, value) {
+      console.warn('set', { target, key, value })
       target._scope[key] = value
-      const rs = target.render()
-      console.log('set', rs)
+
+      target.lastRenderPromiseReject()
+      new Promise((resolve, reject) => {
+        target.lastRenderPromiseReject = reject
+        resolve(true)
+      }).then(() => {
+        target.render()
+      })
+
       return true
     },
   })
-  /**@type Function */
-  create = () => {}
-  /**@type Function */
-  render = () => {}
+  lastRenderPromiseReject = () => {}
+  create = () => {
+    this.create = /**@type {()=>void} */ (Function(Compiler.compile(this.el)))
+    this.create()
+  }
+  render = () => {
+    // this.diff({})
+  }
+  /**
+   * @param {VNode} vNode
+   */
   diff(vNode) {
-    console.log('render', this.render)
-    console.log('diff', JSON.stringify(vNode, null, 2))
     const createNode = View.createNode
-
+    console.log('diff', { el: this.el, vNode })
+    console.groupCollapsed('patch')
     patch(this.el, vNode)
+    console.groupEnd()
+    console.log('render', this.render)
+
     /**
      * @param {Node} node
-     * @param {any} vNode
-     * @param {Node?} parentNode
+     * @param {VNode=} vNode
+     * @param {Node?=} parentNode
      */
     function patch(node, vNode, parentNode = node.parentNode) {
       console.log('patch', { node, vNode, parentNode })
       if (!parentNode) return
-
-      let newNode = node
+      if (vNode?.skip) return
 
       // +
       if (!node && vNode) {
-        const newNode = createNode(vNode)
-        parentNode.appendChild(newNode)
+        parentNode.appendChild(createNode(vNode))
         return
       }
       // -
       if (node && !vNode) {
-        const newNode = createNode({
-          nodeName: '#text',
-          props: { nodeValue: '' },
-          childNodes: [],
-        })
-        parentNode.replaceChild(newNode, node)
+        parentNode.replaceChild(createNode({ nodeName: '#comment' }), node)
         return
       }
       // +-
+      if (!(node && vNode)) return
       if (node.nodeName !== vNode.nodeName) {
-        const newNode = createNode(vNode)
-        parentNode.replaceChild(newNode, node)
+        parentNode.replaceChild(createNode(vNode), node)
         return
       }
 
       // props
-      Object.assign(node, vNode.props)
+      for (const key in vNode.props) {
+        if (node[key] !== vNode.props[key]) {
+          node[key] = vNode.props[key]
+        }
+      }
 
       // childNodes
-      var childNodes = [...node.childNodes]
-      var newChildren = vNode?.childNodes || []
-      var maxLength = Math.max(childNodes.length, newChildren.length)
-      for (var i = 0; i < maxLength; i++) {
-        console.log('child', { childNodes, newChildren, maxLength, i })
-        patch(childNodes[i], newChildren[i], node)
+      const childNodes = [...node.childNodes]
+      const vChildNodes = vNode.childNodes || []
+      const maxLength = Math.max(childNodes.length, vChildNodes.length)
+      console.log('child', { childNodes, vChildNodes, maxLength })
+      for (let i = 0; i < maxLength; i++) {
+        patch(childNodes[i], vChildNodes[i], node)
       }
     }
-  }
-  static createNode(vNode) {
-    const { nodeName, props, childNodes } = vNode
-    const node =
-      nodeName === '#text'
-        ? document.createTextNode(props.nodeValue)
-        : document.createElement(nodeName)
-
-    if (childNodes) {
-      childNodes.forEach((child) => {
-        node.appendChild(View.createNode(child))
-      })
-    }
-
-    return node
   }
   /**
    * @param {Element} target
@@ -113,4 +112,29 @@ export class View extends EventTarget {
     this.render()
   }
   unmount() {}
+  /**
+   * @param {VNode} vNode
+   */
+  static createNode(vNode) {
+    const { nodeName = '', props = {}, childNodes = [] } = vNode
+
+    /**@type Node */
+    const node =
+      {
+        get '#text'() {
+          return document.createTextNode(props.nodeValue)
+        },
+        get '#comment'() {
+          return document.createComment(props.nodeValue ?? '')
+        },
+      }[nodeName] || document.createElement(nodeName)
+
+    if (childNodes) {
+      childNodes.forEach((child) => {
+        node.appendChild(View.createNode(child))
+      })
+    }
+
+    return node
+  }
 }

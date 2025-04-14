@@ -29,10 +29,7 @@ import('./View.js').then(({ View }) => {
   //   bool: true,
   // }
   view.create()
-
-  const rs = view.render()
-  console.log(rs)
-  console.log(view.render)
+  view.render()
 
   document.documentElement.hidden = false
 })

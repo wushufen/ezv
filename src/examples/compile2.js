@@ -37,28 +37,40 @@ const view = {
           nodeName: 'body',
           childNodes: [
             { nodeName: 'script' },
-            (() => {
+            ...(() => {
               if (bool) {
-                return {
-                  nodeName: 'div',
-                  childNodes: [
-                    { nodeName: '#text', props: { nodeValue: 'if' } },
-                  ],
-                }
+                return [
+                  {
+                    nodeName: 'div',
+                    childNodes: [
+                      { nodeName: '#text', props: { nodeValue: 'if' } },
+                    ],
+                  },
+                  undefined,
+                  undefined,
+                ]
               } else if (bool) {
-                return {
-                  nodeName: 'div',
-                  childNodes: [
-                    { nodeName: '#text', props: { nodeValue: 'else if' } },
-                  ],
-                }
+                return [
+                  undefined,
+                  {
+                    nodeName: 'div',
+                    childNodes: [
+                      { nodeName: '#text', props: { nodeValue: 'else if' } },
+                    ],
+                  },
+                  undefined,
+                ]
               } else {
-                return {
-                  nodeName: 'div',
-                  childNodes: [
-                    { nodeName: '#text', props: { nodeValue: 'else' } },
-                  ],
-                }
+                return [
+                  undefined,
+                  undefined,
+                  {
+                    nodeName: 'div',
+                    childNodes: [
+                      { nodeName: '#text', props: { nodeValue: 'else' } },
+                    ],
+                  },
+                ]
               }
             })(),
             {
