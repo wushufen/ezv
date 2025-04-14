@@ -123,7 +123,7 @@ export class View extends EventTarget {
     const node =
       {
         get '#text'() {
-          return document.createTextNode(props.nodeValue)
+          return document.createTextNode(props.nodeValue ?? '')
         },
         get '#comment'() {
           return document.createComment(props.nodeValue ?? '')

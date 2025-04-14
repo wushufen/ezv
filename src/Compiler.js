@@ -72,10 +72,10 @@ export class Compiler {
           `
         }
         if (elseIfAttr && process) {
-          return `{ nodeName: '#comment', nodeValue: 'elseif', skip: false }`
+          return `{ nodeName: '#text', elseif: true, skip: false }`
         }
         if (elseAttr && process) {
-          return `{ nodeName: '#comment', nodeValue: 'else', skip: false }`
+          return `{ nodeName: '#text', else: true, skip: false }`
         }
 
         if (forAttr && process) {
@@ -119,7 +119,7 @@ export class Compiler {
         return code
       }
 
-      return `{ nodeName: '${node.nodeName}', nodeType: ${node.nodeType}, skip: true }`
+      return `{ nodeName: '${node.nodeName}', skip: true }`
     }
 
     return `
