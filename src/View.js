@@ -17,10 +17,10 @@ export class View extends EventTarget {
   // Reactive.toReactive(scope)
   scope = new Proxy(this, {
     has(target, key) {
-      return key in target._scope
+      return true
     },
     get(target, key) {
-      return target._scope[key]
+      return (key in target._scope ? target._scope : window)[key]
     },
     set(target, key, value) {
       // console.warn('set', { target, key, value })

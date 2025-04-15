@@ -125,9 +125,10 @@ export class Compiler {
     return `
     with (this.scope) {
       ${script
-        // let x = 1 // this.scope.x = 1
         // TODO 排除局部变量
-        .replace(/\b(?:var|let|const)\s+(\S+)/g, 'this.scope.$1')}
+        // let x = 1 // 'let', x = 1
+        // let {x1, y1} = this // 'let', {x1, y1} = this
+        .replace(/\b(var|let|const)\s+/g, `'let', `)}
     
     
       this.render = () => {
