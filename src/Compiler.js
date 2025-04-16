@@ -46,7 +46,7 @@ export class Compiler {
 
                 let next = node.nextElementSibling
                 while (next && next.hasAttribute('elseif')) {
-                  code += ` else if (${next.getAttribute('elseif')}) {
+                  code += `else if (${next.getAttribute('elseif')}) {
                     return (\n${compileNode(next, false)})
                   }`
                   next = next.nextElementSibling
@@ -61,7 +61,7 @@ export class Compiler {
                     next = next.nextElementSibling
                     continue
                   } else if (next.hasAttribute('else')) {
-                    return ` else {
+                    return `else {
                       return (\n${compileNode(next, false)})
                     }`
                   }
@@ -122,17 +122,44 @@ export class Compiler {
       return `{ nodeName: '${node.nodeName}', skip: true }`
     }
 
+    script = compileScript(script)
+    function compileScript(script = '') {
+      const reg =
+        // /*     1     */ |  // 2  | "     3    " | '     4    ' | `5|     ${6 |  {7|8}  |   var 9
+        /(\/\*[\s\S]*?\*\/)|(\/\/.*)|("(?:\\?.)*?")|('(?:\\?.)*?')|(`)|(\\?\$\{)|(\{)|(\})|\b(var|let|const)\b/g
+
+      const stack = []
+      return script.replace(reg, (...ms) => {
+        const m = ms[0]
+        const last = stack.at(-1)
+
+        // ` `
+        if (m === '`' && last !== '`') stack.push(m)
+        if (m === '`' && last === '`') stack.pop()
+
+        // ${ }
+        if (m === '${' && last === '`') stack.push(m)
+        if (m === '}' && last === '${') stack.pop()
+
+        // { }
+        if (m === '{' && last !== '`') stack.push(m)
+        if (m === '}' && last !== '`') stack.pop()
+
+        // let {x, y} = this // => 'let', {x, y} = this
+        if (ms[9] && !stack.length) {
+          return `'${m}', `
+        }
+
+        return m
+      })
+    }
+
     return `
     with (this.scope) {
-      ${script
-        // TODO 排除局部变量
-        // let x = 1 // 'let', x = 1
-        // let {x1, y1} = this // 'let', {x1, y1} = this
-        .replace(/\b(var|let|const)\s+/g, `'let', `)}
-    
-    
+      ${script}
+
       this.render = () => {
-        return this.diff(${template})
+        return (${template})
       }
     }
     `

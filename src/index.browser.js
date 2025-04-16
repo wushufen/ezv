@@ -29,7 +29,7 @@ import('./View.js').then(({ View }) => {
   //   bool: true,
   // }
   view.create()
-  view.render()
+  view.mount()
 
   document.documentElement.hidden = false
 })

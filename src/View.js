@@ -26,14 +26,7 @@ export class View extends EventTarget {
       // console.warn('set', { target, key, value })
       target._scope[key] = value
 
-      target.lastRenderPromiseReject()
-      new Promise((resolve, reject) => {
-        target.lastRenderPromiseReject = reject
-        resolve(true)
-      }).then(() => {
-        target.render()
-      })
-
+      target.update()
       return true
     },
   })
@@ -43,18 +36,31 @@ export class View extends EventTarget {
     this.create()
   }
   render = () => {
-    // this.diff({})
+    return { skip: true }
   }
   /**
    * @param {VNode} vNode
+   * @example
+   * childNodes:
+   *      if 1 -   0 if
+   *    text         text
+   *  elseif 0   + 1 elseif
+   *    text         text
+   *    else 0     0 else
+   *    text         text
+   *    for# 1 \ / 2 for#
+   *    for# 2 / \ 1 for#
+   *    for# 3 - + 5 text
+   *    for# 4 -     text
+   *    text
    */
   diff(vNode) {
     const createNode = View.createNode
-    // console.log('diff', { el: this.el, vNode })
-    // console.groupCollapsed('patch')
+    console.log('diff', { el: this.el, vNode })
+    console.groupCollapsed('patch')
     patch(this.el, vNode)
-    // console.groupEnd()
-    console.log('render', this.render)
+    console.groupEnd()
+    console.warn('render', this.render)
 
     /**
      * @param {Node} node
@@ -91,26 +97,32 @@ export class View extends EventTarget {
       }
 
       // childNodes
-      const childNodes = [...node.childNodes]
+      const childNodes = node.childNodes
       const vChildNodes = vNode.childNodes || []
       const maxLength = Math.max(childNodes.length, vChildNodes.length)
-      // console.log('child', { childNodes, vChildNodes, maxLength })
       for (let i = 0; i < maxLength; i++) {
-        patch(childNodes[i], vChildNodes[i], node)
+        const child = childNodes[i]
+        const vChild = vChildNodes[i]
+        patch(child, vChild, node)
       }
     }
   }
+  update() {
+    this.diff(this.render())
+  }
   /**
-   * @param {Element} target
+   * @param {Element=} target
    */
   mount(target) {
-    const shadowRoot =
-      target.shadowRoot || target.attachShadow({ mode: 'open' })
-    shadowRoot.innerHTML = ''
-    shadowRoot.replaceChildren(...this.el.childNodes)
+    if (target) {
+      const shadowRoot =
+        target.shadowRoot || target.attachShadow({ mode: 'open' })
+      shadowRoot.innerHTML = ''
+      shadowRoot.replaceChildren(...this.el.childNodes)
+    }
 
     this.create()
-    this.render()
+    this.update()
   }
   unmount() {}
   /**

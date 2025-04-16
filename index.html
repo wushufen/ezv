@@ -8,30 +8,19 @@
   </head>
   <body>
     <script>
-      let { x, y } = this
-      let list = [1, 2, 3]
-      let bool = true
-
-      const change = () => {
-        bool = !bool
-        list = Array(Math.floor(Math.random() * 10000))
-          .fill(1)
-          .map((n, i) => i)
-        console.log('bool', bool)
-      }
+      let string = 'abc'
     </script>
 
-    <button .title="bool" .onclick="change">${bool}: ${list.length}</button>
-
-    <!-- TODO readonly => readOnly -->
-    <input type="text" .readOnly="bool" />
-
-    <div if="bool">if</div>
-    <div elseif="bool">else if</div>
-    <div else>else</div>
+    <input
+      type="text"
+      .readOnly="bool"
+      .value="string"
+      .oninput="(e) => string = e.target.value"
+    />
+    ${string}
 
     <ul>
-      <li for="const item of list" xif="item % 2 == 0">${item}</li>
+      <li for="const item of string">${item}</li>
     </ul>
   </body>
 </html>
